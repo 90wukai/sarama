@@ -156,6 +156,11 @@ func (b *MockBroker) setHandler(handler requestHandlerFunc) {
 	b.lock.Unlock()
 }
 
+// SetHandler export b.setHandler
+func (b *MockBroker) SetHandler(handler requestHandlerFunc) {
+	b.setHandler(handler)
+}
+
 func (b *MockBroker) serverLoop() {
 	defer close(b.stopper)
 	var err error
