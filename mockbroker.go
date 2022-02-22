@@ -20,7 +20,7 @@ const (
 
 type GSSApiHandlerFunc func([]byte) []byte
 
-type RequestHandlerFunc func(req *request) (res encoderWithHeader)
+type requestHandlerFunc func(req *request) (res encoderWithHeader)
 
 // RequestNotifierFunc is invoked when a mock broker processes a request successfully
 // and will provides the number of bytes read and written.
@@ -59,7 +59,7 @@ type MockBroker struct {
 	listener      net.Listener
 	t             TestReporter
 	latency       time.Duration
-	handler       RequestHandlerFunc
+	handler       requestHandlerFunc
 	notifier      RequestNotifierFunc
 	history       []RequestResponse
 	lock          sync.Mutex
@@ -93,6 +93,14 @@ func (b *MockBroker) SetHandlerByMap(handlerMap map[string]MockResponse) {
 		if mockResponse == nil {
 			return nil
 		}
+		return mockResponse.For(req.body)
+	})
+}
+
+// SetMockHandler defines handle request body with MockResponse.
+func (b *MockBroker) SetMockHandler(handler func(body interface{}) MockResponse) {
+	b.setHandler(func(req *request) (res encoderWithHeader) {
+		mockResponse := handler(req.body)
 		return mockResponse.For(req.body)
 	})
 }
@@ -150,15 +158,10 @@ func (b *MockBroker) Close() {
 // setHandler sets the specified function as the request handler. Whenever
 // a mock broker reads a request from the wire it passes the request to the
 // function and sends back whatever the handler function returns.
-func (b *MockBroker) setHandler(handler RequestHandlerFunc) {
+func (b *MockBroker) setHandler(handler requestHandlerFunc) {
 	b.lock.Lock()
 	b.handler = handler
 	b.lock.Unlock()
-}
-
-// SetHandler export b.setHandler
-func (b *MockBroker) SetHandler(handler RequestHandlerFunc) {
-	b.setHandler(handler)
 }
 
 func (b *MockBroker) serverLoop() {
